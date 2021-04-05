@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+#
+# Author: Thamme Gowda [tg (at) isi (dot) edu] 
+# Created: 2020-03-31
+
+from sacrebleu import corpus_macrof, corpus_microf
+
+EPSILON = 1e-9
+
+def test_clseval():
+    refs = ['the cat sat on the mat', 'ಬಾ ಬಾ ಗಿಣಿಯೇ ಬಣ್ಣದ ಗಿಣಿಯೇ ಹಣ್ಣನು ಕೊಡುವೆನು ಬಾ ಬಾ']
+    refss = [refs]
+    assert abs(corpus_macrof(refs, refss).score - 100.0) < EPSILON
+    assert abs(corpus_microf(refs, refss).score - 100.0) < EPSILON
+
+    hyps = ['cat sat on mat it', 'the ಗಿಣಿಯೇ ಬಣ್ಣದ ಹಣ್ಣನು ಕೊಡುವೆನು ಬಾ']
+    """ 
+    total classes 10 + 1 : 
+        the (2), cat (1), sat (1), on (1), mat (1), ಬಾ (4), ಗಿಣಿಯೇ (2), ಬಣ್ಣದ (1), ಹಣ್ಣನು (1),
+         ಕೊಡುವೆನು (1), it (0)         
+    """
+    #['Type', 'Refs', 'Preds', 'Match', "Precision", 'Recall', "F1"],
+    stats = [
+        ['the',       2,      1,        0,         0,         0,     0],
+        ['cat',       1,      1,        1,         1,         1,     1],
+        ['sat',       1,      1,        1,         1,         1,     1],
+        ['on',        1,      1,        1,         1,         1,     1],
+        ['mat',       1,      1,        1,         1,         1,     1],
+        ['it',        0,      1,        0,         0,         1,     0],
+        ['ಬಾ',        4,      1,        1,         1,       .25,  2*1*.25/(1+.25)],
+        ['ಗಿಣಿಯೇ',    2,      1,        1,         1,       .50,   2*1*.50/(1+.50)],
+        ['ಬಣ್ಣದ',     1,      1,        1,          1,         1,     1],
+        ['ಹಣ್ಣನು',     1,      1,       1,          1,         1,     1],
+        ['ಕೊಡುವೆನು',   1,     1,        1,         1,          1,     1],
+    ]
+
+    smooth_value = 1
+    idx_refs, idx_f1 = 1, -1
+    macro_expected = 100 * sum(r[idx_f1] for r in stats) / len(stats)
+    macro_score = corpus_macrof(hyps, refss)
+    assert abs(macro_score.score - macro_expected) < EPSILON
+
+    # Frequencies for micro avg are always from references; so we can compare different hyps
+    norm = sum(smooth_value + r[idx_refs] for r in stats)
+    micro_expected = 100 * sum((smooth_value + r[idx_refs]) * r[idx_f1] for r in stats) / norm
+    micro_score =  corpus_microf(hyps, refss)
+    assert abs(micro_score.score - micro_expected) < EPSILON
+
+
+if __name__ == '__main__':
+    test_clseval()

@@ -37,7 +37,7 @@ if __package__ is None and __name__ == '__main__':
 
 from .tokenizers import TOKENIZERS, DEFAULT_TOKENIZER
 from .dataset import DATASETS, DOMAINS, COUNTRIES, SUBSETS
-from .metrics import METRICS, AVG_TYPES
+from .metrics import METRICS, AVG_TYPES, DEF_F_BETA, DEF_AVERAGE
 
 from .utils import smart_open, filter_subset, get_available_origlangs, SACREBLEU_DIR
 from .utils import get_langpairs_for_testset, get_available_testsets
@@ -111,10 +111,6 @@ def parse_args():
     arg_parser.add_argument('--force', default=False, action='store_true',
                             help='insist that your tokenized input is actually detokenized')
 
-    arg_parser.add_argument('-a', '--average', metavar='average',
-                          choices=AVG_TYPES, default='macro',
-                          help='What weights to use for averaging (default: %(default)s)')
-
     # ChrF-related arguments
     chrf_p = arg_parser.add_argument_group(title='CHRF args')
     chrf_p.add_argument('--chrf-order', type=int, default=METRICS['chrf'].ORDER,
@@ -124,18 +120,18 @@ def parse_args():
     chrf_p.add_argument('--chrf-whitespace', action='store_true', default=False,
                             help='include whitespace in chrF calculation (default: %(default)s)')
 
-    # ReBLEU related args
-    rebleu_p = arg_parser.add_argument_group(title="ReBLEU Args")
-    rebleu_p.add_argument('-ro', '--rebleu-order', metavar='ORDER', type=int,
-                             default=METRICS['rebleu'].ORDER,
-                             help='ReBLEU ngram order (default: %(default)s)')
-
-
-    rebleu_p.add_argument('-rb', '--rebleu-beta', metavar='BETA', type=float,
-                             default=METRICS['rebleu'].BETA,
-                             help='BETA parameter that weights recall (default: %(default)s)')
-    rebleu_p.add_argument('--report',  type=str, help='ReBLEU report file path. (optional)')
-
+    # Classifier eval related args
+    clseval_p = arg_parser.add_argument_group(title="Args specifically for macrof and microf")
+    clseval_p.add_argument('-fb', '--f-beta', metavar='β', type=float,
+                             default=DEF_F_BETA,
+                             help='F-measure β param that weighs recall (default: %(default)s)')
+    clseval_p.add_argument('--report',  type=str,
+                           help='Path to write detailed performance report of individual classes.'
+                                ' (optional)')
+    clseval_p.add_argument('-a', '--average', metavar='AVG', choices=AVG_TYPES, default=DEF_AVERAGE,
+                            help='How to consolidate individual class performances to summarize'
+                                 f' multi-class performance. Choices: {", ".join(AVG_TYPES.keys())}'
+                                 f' (default: %(default)s)')
 
     # Reporting related arguments
     arg_parser.add_argument('--quiet', '-q', default=False, action='store_true',

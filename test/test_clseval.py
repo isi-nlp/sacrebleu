@@ -1,11 +1,21 @@
-#!/usr/bin/env python
+# Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
-# Author: Thamme Gowda [tg (at) isi (dot) edu] 
-# Created: 2020-03-31
+# Licensed under the Apache License, Version 2.0 (the "License"). You may not
+# use this file except in compliance with the License. A copy of the License
+# is located at
+#
+#     http://aws.amazon.com/apache2.0/
+#
+# or in the "license" file accompanying this file. This file is distributed on
+# an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
+# -*- coding: utf-8 -*-
 from sacrebleu import corpus_macrof, corpus_microf
 
 EPSILON = 1e-9
+
 
 def test_clseval():
     refs = ['the cat sat on the mat', 'ಬಾ ಬಾ ಗಿಣಿಯೇ ಬಣ್ಣದ ಗಿಣಿಯೇ ಹಣ್ಣನು ಕೊಡುವೆನು ಬಾ ಬಾ']
@@ -14,12 +24,11 @@ def test_clseval():
     assert abs(corpus_microf(refs, refss).score - 100.0) < EPSILON
 
     hyps = ['cat sat on mat it', 'the ಗಿಣಿಯೇ ಬಣ್ಣದ ಹಣ್ಣನು ಕೊಡುವೆನು ಬಾ']
-    """ 
-    total classes 10 + 1 : 
-        the (2), cat (1), sat (1), on (1), mat (1), ಬಾ (4), ಗಿಣಿಯೇ (2), ಬಣ್ಣದ (1), ಹಣ್ಣನು (1),
-         ಕೊಡುವೆನು (1), it (0)         
+    """ total classes 10 + 1 : 
+             the (2), cat (1), sat (1), on (1), mat (1), ಬಾ (4), ಗಿಣಿಯೇ (2), ಬಣ್ಣದ (1), ಹಣ್ಣನು (1),
+             ಕೊಡುವೆನು (1), it (0)         
     """
-    #['Type', 'Refs', 'Preds', 'Match', "Precision", 'Recall', "F1"],
+    # ['Type', 'Refs', 'Preds', 'Match', "Precision", 'Recall', "F1"],
     stats = [
         ['the',       2,      1,        0,         0,         0,     0],
         ['cat',       1,      1,        1,         1,         1,     1],
@@ -43,7 +52,7 @@ def test_clseval():
     # Frequencies for micro avg are always from references; so we can compare different hyps
     norm = sum(smooth_value + r[idx_refs] for r in stats)
     micro_expected = 100 * sum((smooth_value + r[idx_refs]) * r[idx_f1] for r in stats) / norm
-    micro_score =  corpus_microf(hyps, refss)
+    micro_score = corpus_microf(hyps, refss)
     assert abs(micro_score.score - micro_expected) < EPSILON
 
 

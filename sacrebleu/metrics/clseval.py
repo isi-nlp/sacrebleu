@@ -1,4 +1,24 @@
-#!/usr/bin/env python
+# Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"). You may not
+# use this file except in compliance with the License. A copy of the License
+# is located at
+#
+#     http://aws.amazon.com/apache2.0/
+#
+# or in the "license" file accompanying this file. This file is distributed on
+# an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
+
+# -*- coding: utf-8 -*-
+
+"""
+This work is based on:
+  Macro-average: Rare Types Are Important Too
+    Gowda et al (NAACL 2021)
+    TODO: update the link to paper
+"""
 
 import copy
 import logging as log
@@ -15,34 +35,15 @@ DEF_AVERAGE = 'macro'
 DEF_SMOOTH_VAL = 1
 
 
-class NamedResult(BaseScore):
-    __slots__ = ('name',)
+class ClassMeasure(BaseScore):
+    __slots__ = 'preds', 'refs', 'correct', 'measure_name', 'name'
 
-    def __init__(self, name, score):
-        self.name = name
-        super().__init__(score=score)
-
-    def format(self, width=4, score_only=False, signature='') -> str:
-        if score_only:
-            return f'{self.score:.{width}f}'
-        prefix = self.name
-        if signature:
-            prefix += f'+{signature}'
-        return f'{prefix} {self.score:.{width}f}'
-
-    def __repr__(self):
-        return str(self)
-
-class ClassMeasure(NamedResult):
-    __slots__ = 'preds', 'refs', 'correct', 'measure_name'
-
-    def __init__(self, name, preds=0, refs=0, correct=0, measure='f1'):
+    def __init__(self, name, preds=0, refs=0, correct=0):
         self.preds = preds
         self.refs = refs
         self.correct = correct
-        assert measure in {'f1', 'precision', 'recall'}
-        self.measure_name = measure
-        super().__init__(score=self.measure(), name=name)
+        self.name = name
+        super().__init__(score=self.f1)
 
     @property
     def precision(self) -> float:
@@ -67,8 +68,7 @@ class ClassMeasure(NamedResult):
     def f1(self) -> float:
         return self.f_measure(beta=1)
 
-    def measure(self, measure_name=None):
-        measure_name = measure_name or self.measure_name
+    def measure(self, measure_name):
         cache = dict(f1=self.f1, precision=self.precision, recall=self.recall)
         if measure_name in cache:
             return cache[measure_name]
@@ -82,6 +82,13 @@ class ClassMeasure(NamedResult):
         return f'ClassMeasure[{self.name}, pred/cor/ref={self.preds}/{self.correct}/{self.refs} ' \
                f'P/R/F1={self.precision:g}/{self.recall:g}/{self.f1:g}]'
 
+    def format(self, width=4, score_only=False, signature='') -> str:
+        if score_only:
+            return f'{self.score:.{width}f}'
+        prefix = self.name
+        if signature:
+            prefix += f'+{signature}'
+        return f'{prefix} {self.score:.{width}f}'
 
 AVG_TYPES = {
     'macro': lambda _: 1,
@@ -92,7 +99,7 @@ AVG_TYPES = {
 }
 
 
-class MultiClassMeasure(NamedResult):
+class MultiClassMeasure(BaseScore):
     """
     Consolidates multiple ClassMeasure s into single measure
     """
@@ -110,6 +117,11 @@ class MultiClassMeasure(NamedResult):
         f_score = sum(score * w for score, w in wt_scores) / sum(w for score, w in wt_scores)
         scaler = 100 if percent else 1
         f_score *= scaler
+        name = 'F{beta:g}'.format(beta=f_beta)
+        if average in ('macro', 'micro'):
+            name = average.title() + name  # eg MacroF1 MicroF1 MacroF2 ...
+        self.name = name
+        super().__init__(score=f_score)
 
         # extra info
         self.hyp_len = hyp_len
@@ -120,11 +132,6 @@ class MultiClassMeasure(NamedResult):
                          for m in classes]
             norm = sum(w for score, w in wt_scores)
             self.avgs[n] = scaler * sum(score * w for score, w in wt_scores) / norm
-
-        name = 'F{beta:g}'.format(beta=f_beta)
-        if average in ('macro', 'micro'):
-            name = average.title() + name  # eg MacroF1 MicroF1 MacroF2 ...
-        super().__init__(name=name, score=f_score)
 
     def __str__(self):
         return self.format()
@@ -158,7 +165,7 @@ class MultiClassMeasure(NamedResult):
         ljust = 15
 
         def format_class_stat(class_: ClassMeasure):
-            row = [" ".join(class_.name).ljust(ljust), f"{class_.measure() * scaler:.{width}f}"]
+            row = [" ".join(class_.name).ljust(ljust), f"{class_.score * scaler:.{width}f}"]
             row += [str(x) for x in [class_.refs, class_.preds, class_.correct]]
             row += [f'{class_.measure(measure_name=x) * scaler:.{width}f}'
                     for x in 'f1 precision recall'.split()]

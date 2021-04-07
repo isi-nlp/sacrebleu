@@ -5,15 +5,10 @@ from .. import __version__
 class BaseScore:
     """A base score class to derive from."""
 
-    __slots__ = ('_score',)
+    __slots__ = ('score',)
 
     def __init__(self, score):
-        self._score = score
-
-    @property
-    def score(self) -> float:
-        # Child classes are may override and compute it lazily
-        return self._score
+        self.score = score
 
     def format(self, width=2, score_only=False, signature=''):
         raise NotImplementedError()

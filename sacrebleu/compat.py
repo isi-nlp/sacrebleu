@@ -4,7 +4,7 @@ from functools import partial
 
 from .tokenizers import DEFAULT_TOKENIZER
 from .metrics import BLEU, CHRF, TER, BLEUScore, CHRFScore, TERScore
-from .metrics import MultiClassMeasure, METRICS
+from .metrics import MultiClassMeasure, METRICS, AVG_TYPES
 
 
 ######################################################################
@@ -173,9 +173,9 @@ def sentence_ter(hypothesis: str,
     return metric.sentence_score(hypothesis, references)
 
 
-def corpus_macrof(sys_stream: Union[str, Iterable[str]],
+def corpus_f(sys_stream: Union[str, Iterable[str]],
             ref_streams: Union[str, List[Iterable[str]]],
-            average: str = 'macro',
+            average: str,
             smooth_value=1,
             f_beta=1,
             force=False,
@@ -197,7 +197,7 @@ def corpus_macrof(sys_stream: Union[str, Iterable[str]],
     """
 
     # limiting to these special cases because others are not tested
-    assert average in ('macro', 'micro')
+    assert average in AVG_TYPES
     smooth_method = 'add-k'
     max_order = 1 # We tested higher order n-grams too, but unigrams itself turned out competitive
 
@@ -207,8 +207,8 @@ def corpus_macrof(sys_stream: Union[str, Iterable[str]],
     metric = METRICS[average + 'f'](args)
     return metric.corpus_score(sys_stream, ref_streams)
 
-# """Computes Macro-F measure on a corpus. Refer to `corpus_f()` for additional arguments."""
-#corpus_macrof = partial(corpus_f, average='macro')
+"""Computes Macro-F measure on a corpus. Refer to `corpus_f()` for additional arguments."""
+corpus_macrof = partial(corpus_f, average='macro')
 
 """Computes Micro-F measure on a corpus. Refer to `corpus_f()` for additional arguments."""
-corpus_microf = partial(corpus_macrof, average='micro')  # override
+corpus_microf = partial(corpus_f, average='micro')
